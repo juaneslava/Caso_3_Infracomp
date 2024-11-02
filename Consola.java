@@ -19,7 +19,9 @@ public class Consola {
         switch (opcion) {
             case 1:
                 System.out.println("Generando llaves...");
-                // Lógica para generar llaves
+                KeyGenerator keyGen = generarLlaves();
+                System.out.println("Llaves publica: " + keyGen.getPublicKey());
+                System.out.println("Llaves privada: " + keyGen.getPrivateKey());
                 ejecutarMenu();
                 break;
             case 2:
@@ -36,6 +38,11 @@ public class Consola {
                 break;
         }
         scanner.close();
+    }
+
+    public KeyGenerator generarLlaves() {
+        KeyGenerator keyGenerator = new KeyGenerator();
+        return keyGenerator;
     }
 
 }
