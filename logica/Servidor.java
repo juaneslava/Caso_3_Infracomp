@@ -48,8 +48,8 @@ public class Servidor extends Thread{
 
     @Override
     public void run() {
-        try {
-            
+        try {          
+            responderReto();
             clientSocket.close();
             serverSocket.close();
         } catch (IOException e) {
@@ -150,7 +150,8 @@ public class Servidor extends Thread{
         try {
             String reto = in.readLine();
             System.out.println("Reto recibido: " + reto);
-            String respuesta = cifrarMensaje(reto, privateKey);
+            String respuesta = descifrarMensaje(reto, privateKey);
+            System.out.println("Respuesta: " + respuesta);
             out.write(respuesta + "\n");
             out.newLine();
             out.flush();
