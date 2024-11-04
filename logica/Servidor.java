@@ -149,6 +149,7 @@ public class Servidor extends Thread{
     public void responderReto() {
         try {
             String reto = in.readLine();
+            System.out.println("Reto recibido: " + reto);
             String respuesta = cifrarMensaje(reto, privateKey);
             out.write(respuesta + "\n");
             out.newLine();

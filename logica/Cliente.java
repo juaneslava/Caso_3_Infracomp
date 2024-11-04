@@ -65,16 +65,10 @@ public class Cliente extends Thread {
     public boolean verificarReto() {
         String reto = "Best group of infracomp";
         String respuesta = cifrarMensaje(reto, serverPublicKey);
-        try {
-            out.write(respuesta + "\n");
-            out.newLine();
-            out.flush();
-            String response = in.readLine();
-            return response.equals("OK");
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
+        write(respuesta);
+        String mensaje = read();
+        String mensajeDescifrado = descifrarMensaje(mensaje);
+        return mensajeDescifrado.equals(reto);
     }
 
     public String cifrarMensaje(String mensaje, PublicKey publicKey) {
@@ -116,6 +110,25 @@ public class Cliente extends Thread {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    public String read() {
+        try {
+            return in.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public void write(String message) {
+        try {
+            out.write(message + "\n");
+            out.newLine();
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
