@@ -99,7 +99,7 @@ public class Cliente extends Thread {
             return null;
         }
     }
-
+ 
     public PublicKey readPublicKeyFromFile() {
         try {
             FileInputStream fis = new FileInputStream("public/public.key");
