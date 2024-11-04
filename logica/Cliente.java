@@ -2,7 +2,9 @@ package logica;
 
 import java.io.*;
 import java.net.Socket;
+import java.security.KeyFactory;
 import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -103,10 +105,14 @@ public class Cliente extends Thread {
     public PublicKey readPublicKeyFromFile() {
         try {
             FileInputStream fis = new FileInputStream("public/public.key");
-            ObjectInputStream ois = new ObjectInputStream(fis);
-            PublicKey publicKey = (PublicKey) ois.readObject();
-            ois.close();
-            return publicKey;
+            byte[] encodedPublicKey = fis.readAllBytes();
+
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            X509EncodedKeySpec publicKeySpec = new X509EncodedKeySpec(encodedPublicKey);
+
+            fis.close();
+            return keyFactory.generatePublic(publicKeySpec);
+
         } catch (Exception e) {
             e.printStackTrace();
             return null;

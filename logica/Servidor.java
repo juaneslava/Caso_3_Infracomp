@@ -84,6 +84,8 @@ public class Servidor extends Thread{
             this.publicKey = keyFactory.generatePublic(publicKeySpec);
             this.privateKey = keyFactory.generatePrivate(privateKeySpec);
 
+            System.out.println("Public key: " + publicKey);
+
             fisPublic.close();
             fisPrivate.close();
 
