@@ -66,6 +66,8 @@ public class Cliente extends Thread {
             // Paso 16: Recibir respuesta
             String estado = SecurityUtils.decryptWithAES(read(), k_ab, iv);
             String hmac = read();
+            
+            // Paso 17: Verificar
             if(!SecurityUtils.verifyHMC(estado, hmac, k_ab))
             {
                 System.out.println("Error: El mensaje ha sido modificado.");
@@ -73,7 +75,7 @@ public class Cliente extends Thread {
             }
             System.out.println("Estado del paquete: " + estado);
             
-            // Paso 17: Terminar
+            // Paso 18: Enviar mensaje de terminar
             write("TERMINAR");
 
 
