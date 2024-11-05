@@ -22,6 +22,9 @@ public class Cliente extends Thread {
     private BufferedReader in;
     private BufferedWriter out;
 
+    private byte[] k_ab;
+    private byte[] iv;
+
     
     private PublicKey serverPublicKey;
     private String retoOriginal;
@@ -62,6 +65,26 @@ public class Cliente extends Thread {
                 System.out.println("último OK fue enviado.");
             }
             Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
+
+            // Paso 13 y 14: Enviar solicitud
+            enviarSolicitud("1", "10");
+
+            // Paso 16: Recibir respuesta
+            String estado = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+            String hmac = read();
+            
+            // Paso 17: Verificar
+            if(!SecurityUtils.verifyHMC(estado, hmac, k_ab))
+            {
+                System.out.println("Error: El mensaje ha sido modificado.");
+                return;
+            }
+            System.out.println("Estado del paquete: " + estado);
+            
+            // Paso 18: Enviar mensaje de terminar
+            write("TERMINAR");
+
+
             socket.close();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
@@ -156,6 +179,18 @@ public class Cliente extends Thread {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public void enviarSolicitud(String id_cliente, String id_paquete) {
+        String hmac_cliente = SecurityUtils.generateHMC(id_cliente, k_ab);
+        String hmac_paquete = SecurityUtils.generateHMC(id_paquete, k_ab);
+        String cliente_encrypted = SecurityUtils.encryptWithAES(id_cliente, k_ab, iv);
+        String paquete_encrypted = SecurityUtils.encryptWithAES(id_paquete, k_ab, iv);
+
+        write(cliente_encrypted);
+        write(hmac_cliente);
+        write(paquete_encrypted);
+        write(hmac_paquete);
     }
 
     public String read() {

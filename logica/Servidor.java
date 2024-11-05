@@ -14,6 +14,8 @@ import java.security.KeyFactory;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.crypto.Cipher;
 
@@ -25,12 +27,16 @@ public class Servidor extends Thread{
 
     private PublicKey publicKey;
     private PrivateKey privateKey;
+    private byte[] k_ab;
+    private byte[] iv;
 
     private InputStreamReader isr;
     private OutputStreamWriter osw;
     private BufferedReader in;
     private BufferedWriter out;
     private String retoRecibidoCifrado;
+
+    private Map<String, Paquete> paquetes;
     
     public Servidor(int puerto) {
         try {
@@ -45,6 +51,7 @@ public class Servidor extends Thread{
         } catch (Exception e) {
             e.printStackTrace();
         }
+        paquetes = new HashMap<>();
     }
 
     @Override
@@ -54,6 +61,16 @@ public class Servidor extends Thread{
             recibirReto(); // Recibir el reto cifrado del cliente
             responderReto();
             esperarConfirmacion();
+
+            // Paso 15: Recibir la solicitud del cliente
+            String id_cliente = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+            String hmac_cliente = read();
+            String id_paquete = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+            String hmac_paquete = read();
+
+            // Paso 16: Enviar respuesta
+            atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
+
             clientSocket.close();
             serverSocket.close();
             System.out.println("Conexión cerrada en el servidor.");
@@ -197,14 +214,12 @@ public class Servidor extends Thread{
                     System.out.println("Reto descifrado: " + retoDescifrado);
     
                     // Enviar la respuesta al cliente
-                    out.write(retoDescifrado + "\n");
-                    out.newLine();
-                    out.flush();
+                    write(retoDescifrado);
                     System.out.println("Rta enviada al cliente.");
                 } else {
                     System.out.println("Error al descifrar el reto. Enviando mensaje de error al cliente.");
-                    out.write("ERROR_DESCIFRADO\n");
-                    out.flush();
+                    write("ERROR_DESCIFRADO");
+                    
                 }
             } else {
                 System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
@@ -219,7 +234,7 @@ public class Servidor extends Thread{
             System.out.println("Esperando confirmación del cliente...");
             
             // Leer confirmación ("OK" o "ERROR") del cliente
-            String confirmacion = in.readLine();
+            String confirmacion = read();
             
             System.out.println("Confirmación recibida del cliente: " + confirmacion);
             
@@ -230,14 +245,53 @@ public class Servidor extends Thread{
             } else {
                 System.out.println("Mensaje inesperado del cliente: " + confirmacion);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    public void atenderSolicitud(String id_cliente, String hmac_cliente, String id_paquete, String hmac_paquete){
+        if (SecurityUtils.verifyHMC(id_paquete, hmac_paquete, k_ab)) {
+            if (SecurityUtils.verifyHMC(id_cliente, hmac_cliente, k_ab)) {
+                String estado = verEstadoPaquete(id_paquete);
+                String hmac_estado = SecurityUtils.generateHMC(estado, k_ab);
+                String estado_encrypted = SecurityUtils.encryptWithAES(estado, k_ab, iv);
+                write(estado_encrypted);
+                write(hmac_estado);
+            } else {
+                write("ERROR");
+            }
+        } else {
+            write("ERROR");
+        }
+    }
+
+    public String verEstadoPaquete(String id) {
+        Paquete paquete = paquetes.get(id);
+        if (paquete == null) {
+            return "ERROR";
+        } else {
+            return String.valueOf(paquete.getEstado());
+        }
+    }
+
+    public void write(String message) {
+        try {
+            out.write(message + "\n");
+            out.newLine();
+            out.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-    
-    
-    
-    
+
+    public String read() {
+        try {
+            return in.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
             
 
     public static void main(String[] args) {
