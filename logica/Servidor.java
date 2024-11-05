@@ -63,6 +63,7 @@ public class Servidor extends Thread{
             String id_paquete = SecurityUtils.decryptWithAES(read(), k_ab, iv);
             String hmac_paquete = read();
 
+            // Paso 16: Enviar respuesta
             atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
 
             clientSocket.close();
