@@ -204,8 +204,8 @@ public class Cliente extends Thread {
 
     public void write(String message) {
         try {
-            out.write(message + "\n");
-            out.newLine();
+            out.write(message+ "\n");
+            //out.newLine();
             out.flush();
         } catch (IOException e) {
             e.printStackTrace();

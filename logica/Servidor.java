@@ -100,8 +100,8 @@ public class Servidor extends Thread{
                 System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
                 return;
             }
-            System.out.println("Reto cifrado recibido: " + retoRecibidoCifrado);
-            System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
+            System.out.println("Reto cifrado recibido");
+            //System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -201,7 +201,7 @@ public class Servidor extends Thread{
 
     public void responderReto() {
         try {
-            String retoRecibidoCifrado = in.readLine();
+            //String retoRecibidoCifrado = in.readLine();
             System.out.println("Mensaje cifrado recibido: " + retoRecibidoCifrado);
     
             if (retoRecibidoCifrado != null && !retoRecibidoCifrado.isEmpty()) {
@@ -224,7 +224,7 @@ public class Servidor extends Thread{
             } else {
                 System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -235,7 +235,6 @@ public class Servidor extends Thread{
             
             // Leer confirmación ("OK" o "ERROR") del cliente
             String confirmacion = read();
-            
             System.out.println("Confirmación recibida del cliente: " + confirmacion);
             
             if ("OK".equals(confirmacion)) {
