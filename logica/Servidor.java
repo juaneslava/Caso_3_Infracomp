@@ -13,6 +13,8 @@ import java.security.PublicKey;
 import java.security.KeyFactory;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.crypto.Cipher;
 
@@ -24,12 +26,15 @@ public class Servidor extends Thread{
 
     private PublicKey publicKey;
     private PrivateKey privateKey;
+    private byte[] k_ab;
+    private byte[] iv;
 
     private InputStreamReader isr;
     private OutputStreamWriter osw;
     private BufferedReader in;
     private BufferedWriter out;
 
+    private Map<String, Paquete> paquetes;
     
     public Servidor(int puerto) {
         try {
@@ -44,12 +49,22 @@ public class Servidor extends Thread{
         } catch (Exception e) {
             e.printStackTrace();
         }
+        paquetes = new HashMap<>();
     }
 
     @Override
     public void run() {
         try {          
             responderReto();
+
+            // Paso 15: Recibir la solicitud del cliente
+            String id_cliente = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+            String hmac_cliente = read();
+            String id_paquete = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+            String hmac_paquete = read();
+
+            atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
+
             clientSocket.close();
             serverSocket.close();
         } catch (IOException e) {
@@ -158,6 +173,50 @@ public class Servidor extends Thread{
         } catch (IOException e) {
             e.printStackTrace();
         }    
+    }
+
+    public void atenderSolicitud(String id_cliente, String hmac_cliente, String id_paquete, String hmac_paquete){
+        if (SecurityUtils.verifyHMC(id_paquete, hmac_paquete, k_ab)) {
+            if (SecurityUtils.verifyHMC(id_cliente, hmac_cliente, k_ab)) {
+                String estado = verEstadoPaquete(id_paquete);
+                String hmac_estado = SecurityUtils.generateHMC(estado, k_ab);
+                String estado_encrypted = SecurityUtils.encryptWithAES(estado, k_ab, iv);
+                write(estado_encrypted);
+                write(hmac_estado);
+            } else {
+                write("ERROR");
+            }
+        } else {
+            write("ERROR");
+        }
+    }
+
+    public String verEstadoPaquete(String id) {
+        Paquete paquete = paquetes.get(id);
+        if (paquete == null) {
+            return "ERROR";
+        } else {
+            return String.valueOf(paquete.getEstado());
+        }
+    }
+
+    public void write(String message) {
+        try {
+            out.write(message + "\n");
+            out.newLine();
+            out.flush();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public String read() {
+        try {
+            return in.readLine();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
             
 

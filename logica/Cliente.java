@@ -22,6 +22,9 @@ public class Cliente extends Thread {
     private BufferedReader in;
     private BufferedWriter out;
 
+    private byte[] k_ab;
+    private byte[] iv;
+
     
     private PublicKey serverPublicKey;
     
@@ -56,6 +59,11 @@ public class Cliente extends Thread {
             {
                 System.out.println("Reto validado.");
             }
+
+            // Desde aquí va el paso 13
+            enviarSolicitud("1", "10");
+
+            
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -111,6 +119,18 @@ public class Cliente extends Thread {
             e.printStackTrace();
             return null;
         }
+    }
+
+    public void enviarSolicitud(String id_cliente, String id_paquete) {
+        String hmac_cliente = SecurityUtils.generateHMC(id_cliente, k_ab);
+        String hmac_paquete = SecurityUtils.generateHMC(id_paquete, k_ab);
+        String cliente_encrypted = SecurityUtils.encryptWithAES(id_cliente, k_ab, iv);
+        String paquete_encrypted = SecurityUtils.encryptWithAES(id_paquete, k_ab, iv);
+
+        write(cliente_encrypted);
+        write(hmac_cliente);
+        write(paquete_encrypted);
+        write(hmac_paquete);
     }
 
     public String read() {
