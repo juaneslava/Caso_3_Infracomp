@@ -13,6 +13,7 @@ import java.security.PublicKey;
 import java.security.KeyFactory;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.util.Base64;
 
 import javax.crypto.Cipher;
 
@@ -29,7 +30,7 @@ public class Servidor extends Thread{
     private OutputStreamWriter osw;
     private BufferedReader in;
     private BufferedWriter out;
-
+    private String retoRecibidoCifrado;
     
     public Servidor(int puerto) {
         try {
@@ -48,15 +49,47 @@ public class Servidor extends Thread{
 
     @Override
     public void run() {
-        try {          
+        try {    
+            recibirInicio(); // Recibir el mensaje "SECINIT" del cliente      
+            recibirReto(); // Recibir el reto cifrado del cliente
             responderReto();
+            esperarConfirmacion();
             clientSocket.close();
             serverSocket.close();
+            System.out.println("Conexión cerrada en el servidor.");
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
     
+    public void recibirInicio() {
+        try {
+            String inicio = in.readLine();
+            if ("SECINIT".equals(inicio)) {
+                System.out.println("Inicio de sesión recibido.");
+            } else {
+                System.out.println("Error: Mensaje de inicio no válido.");
+                // Opcional: podrías cerrar la conexión si el mensaje de inicio es incorrecto
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void recibirReto() {
+        try {
+            retoRecibidoCifrado = in.readLine(); // Lee el reto cifrado enviado por el cliente
+            if (retoRecibidoCifrado == null || retoRecibidoCifrado.isEmpty()) {
+                System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
+                return;
+            }
+            System.out.println("Reto cifrado recibido: " + retoRecibidoCifrado);
+            System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     public void stopServer() {
         try {
             if (serverSocket != null) {
@@ -135,11 +168,14 @@ public class Servidor extends Thread{
 
     public String descifrarMensaje(String mensajeCifrado, PrivateKey privateKey) {
         try {
-            Cipher cipher = Cipher.getInstance("RSA");
+            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.DECRYPT_MODE, privateKey);
-            byte[] encryptedBytes = mensajeCifrado.getBytes();
+    
+            // Decodificar de Base64 y descifrar
+            byte[] encryptedBytes = Base64.getDecoder().decode(mensajeCifrado);
             byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
-            return new String(decryptedBytes);
+    
+            return new String(decryptedBytes, "UTF-8");
         } catch (Exception e) {
             e.printStackTrace();
             return null;
@@ -148,17 +184,60 @@ public class Servidor extends Thread{
 
     public void responderReto() {
         try {
-            String reto = in.readLine();
-            System.out.println("Reto recibido: " + reto);
-            String respuesta = descifrarMensaje(reto, privateKey);
-            System.out.println("Respuesta: " + respuesta);
-            out.write(respuesta + "\n");
-            out.newLine();
-            out.flush();
+            String retoRecibidoCifrado = in.readLine();
+            System.out.println("Mensaje cifrado recibido: " + retoRecibidoCifrado);
+    
+            if (retoRecibidoCifrado != null && !retoRecibidoCifrado.isEmpty()) {
+                System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
+    
+                // Intentar descifrar el reto recibido
+                String retoDescifrado = descifrarMensaje(retoRecibidoCifrado, privateKey);
+    
+                if (retoDescifrado != null) {
+                    System.out.println("Reto descifrado: " + retoDescifrado);
+    
+                    // Enviar la respuesta al cliente
+                    out.write(retoDescifrado + "\n");
+                    out.newLine();
+                    out.flush();
+                    System.out.println("Rta enviada al cliente.");
+                } else {
+                    System.out.println("Error al descifrar el reto. Enviando mensaje de error al cliente.");
+                    out.write("ERROR_DESCIFRADO\n");
+                    out.flush();
+                }
+            } else {
+                System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
+            }
         } catch (IOException e) {
             e.printStackTrace();
-        }    
+        }
     }
+
+    public void esperarConfirmacion() {
+        try {
+            System.out.println("Esperando confirmación del cliente...");
+            
+            // Leer confirmación ("OK" o "ERROR") del cliente
+            String confirmacion = in.readLine();
+            
+            System.out.println("Confirmación recibida del cliente: " + confirmacion);
+            
+            if ("OK".equals(confirmacion)) {
+                System.out.println("Cliente confirmó: Reto validado correctamente.");
+            } else if ("ERROR".equals(confirmacion)) {
+                System.out.println("Cliente indicó un error en la validación del reto.");
+            } else {
+                System.out.println("Mensaje inesperado del cliente: " + confirmacion);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
+    
+    
+    
             
 
     public static void main(String[] args) {

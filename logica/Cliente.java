@@ -24,6 +24,7 @@ public class Cliente extends Thread {
 
     
     private PublicKey serverPublicKey;
+    private String retoOriginal;
     
     // Constructor to set server address and port
     public Cliente(String address, int port) {
@@ -47,6 +48,8 @@ public class Cliente extends Thread {
     @Override
     public void run() {
         try {
+            enviarInicio();
+            enviarReto();   // Envía el reto cifrado
             boolean validarReto = verificarReto();
             if (!validarReto) {
                 System.out.println("No se pudo validar el reto.");
@@ -54,28 +57,70 @@ public class Cliente extends Thread {
             }
             else
             {
-                System.out.println("Reto validado.");
+                System.out.println("Reto validado. Enviando OK.");
+                write("OK");
+                System.out.println("último OK fue enviado.");
             }
+            Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
             socket.close();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
     }
 
-    public boolean verificarReto() {
-        String reto = "Best group of infracomp";
-        String respuesta = cifrarMensaje(reto, serverPublicKey);
-        write(respuesta);
-        String mensaje = read();
-        String mensajeDescifrado = descifrarMensaje(mensaje);
-        return mensajeDescifrado.equals(reto);
+    public void enviarInicio() {
+        write("SECINIT");
     }
 
+    public void enviarReto() {
+        // Generar un reto corto
+        String reto = "Best group of infracomp";
+        String retoCifrado = cifrarMensaje(reto, serverPublicKey);
+    
+        if (retoCifrado != null && !retoCifrado.isEmpty()) {
+            System.out.println("Reto cifrado a enviar: " + retoCifrado);
+            write(retoCifrado); // Envía el reto cifrado al servidor
+            System.out.println("Reto enviado al servidor.");
+        } else {
+            System.out.println("Error: Reto cifrado es nulo o vacío.");
+        }
+    }
+
+    public boolean verificarReto() {
+        try {
+            // Leer la respuesta `Rta` enviada por el servidor
+            String respuesta = read();
+            System.out.println("Respuesta recibida del servidor: " + respuesta);
+    
+            if (respuesta != null && respuesta.equals("Best group of infracomp")) {
+                System.out.println("Reto validado correctamente. Enviando OK.");
+                return true;
+            } else {
+                System.out.println("Fallo en la validación del reto. Enviando ERROR.");
+                return false;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    
+    
+    
     public String cifrarMensaje(String mensaje, PublicKey publicKey) {
         try {
-            Cipher cipher = Cipher.getInstance("RSA");
+            Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
             cipher.init(Cipher.ENCRYPT_MODE, publicKey);
-            byte[] encryptedBytes = cipher.doFinal(mensaje.getBytes());
+    
+            // Asegurarse de que el mensaje no excede el límite de 117 bytes
+            byte[] mensajeBytes = mensaje.getBytes("UTF-8");
+            if (mensajeBytes.length > 117) {
+                System.out.println("Error: El mensaje es demasiado largo para cifrar con RSA de 1024 bits.");
+                return null;
+            }
+    
+            // Cifrar y codificar en Base64
+            byte[] encryptedBytes = cipher.doFinal(mensajeBytes);
             return Base64.getEncoder().encodeToString(encryptedBytes);
         } catch (Exception e) {
             e.printStackTrace();
