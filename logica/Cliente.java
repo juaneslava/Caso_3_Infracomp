@@ -60,10 +60,17 @@ public class Cliente extends Thread {
                 System.out.println("Reto validado.");
             }
 
-            // Desde aquí va el paso 13
+            // Paso 13 y 14: Enviar solicitud
             enviarSolicitud("1", "10");
 
-            
+            // Paso 16: Recibir respuesta
+            String respuesta = read();
+            System.out.println("Respuesta: " + respuesta);
+
+            // Paso 17: Terminar
+            write("TERMINAR");
+
+
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
