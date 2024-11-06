@@ -19,7 +19,7 @@ public class Consola {
         opcion = scanner.nextInt();
         switch (opcion) {
             case 1:
-                KeyGenerator keyGen = generarLlaves();
+                generarLlaves();
                 break;
             case 2:
                 ejecutarDelegados();
@@ -35,9 +35,8 @@ public class Consola {
             scanner.close();
     }
 
-    public KeyGenerator generarLlaves() {
-        KeyGenerator keyGenerator = new KeyGenerator();
-        return keyGenerator;
+    public void generarLlaves() {
+        new KeyGenerator();
     }
 
     public void ejecutarDelegados() {

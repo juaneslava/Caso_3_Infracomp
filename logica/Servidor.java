@@ -343,11 +343,11 @@ public class Servidor extends Thread{
     }
 
     public void atenderSolicitud(String id_cliente, String hmac_cliente, String id_paquete, String hmac_paquete){
-        if (SecurityUtils.verifyHMC(id_paquete, hmac_paquete, k_ab)) {
-            if (SecurityUtils.verifyHMC(id_cliente, hmac_cliente, k_ab)) {
+        if (SecurityUtils.verifyHMC(id_paquete, hmac_paquete, k_hmac)) {
+            if (SecurityUtils.verifyHMC(id_cliente, hmac_cliente, k_hmac)) {
                 String estado = verEstadoPaquete(id_paquete);
-                String hmac_estado = SecurityUtils.generateHMC(estado, k_ab);
                 String estado_encrypted = SecurityUtils.encryptWithAES(estado, k_ab, iv);
+                String hmac_estado = SecurityUtils.generateHMC(estado, k_hmac);
                 write(estado_encrypted);
                 write(hmac_estado);
             } else {

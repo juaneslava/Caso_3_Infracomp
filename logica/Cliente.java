@@ -11,8 +11,6 @@ import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Base64;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 
 import javax.crypto.Cipher;
 
@@ -40,7 +38,6 @@ public class Cliente extends Thread {
     private BigInteger G;
     private BigInteger P;
     private BigInteger Gx;
-    private byte[] sharedSecretKey; // Clave para HMAC
     
     // Constructor to set server address and port
     public Cliente(String address, int port) {
@@ -87,7 +84,7 @@ public class Cliente extends Thread {
             String hmac = read();
             
             // Paso 17: Verificar
-            if(!SecurityUtils.verifyHMC(estado, hmac, k_ab))
+            if(!SecurityUtils.verifyHMC(estado, hmac, k_hmac))
             {
                 System.out.println("Error en la verificación del HMAC. Terminando conexión.");
                 return;
@@ -229,8 +226,8 @@ public class Cliente extends Thread {
     }
 
     public void enviarSolicitud(String id_cliente, String id_paquete) {
-        String hmac_cliente = SecurityUtils.generateHMC(id_cliente, k_ab);
-        String hmac_paquete = SecurityUtils.generateHMC(id_paquete, k_ab);
+        String hmac_cliente = SecurityUtils.generateHMC(id_cliente, k_hmac);
+        String hmac_paquete = SecurityUtils.generateHMC(id_paquete, k_hmac);
         String cliente_encrypted = SecurityUtils.encryptWithAES(id_cliente, k_ab, iv);
         String paquete_encrypted = SecurityUtils.encryptWithAES(id_paquete, k_ab, iv);
 
