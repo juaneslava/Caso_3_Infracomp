@@ -1,5 +1,8 @@
 package logica;
 
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
@@ -60,5 +63,37 @@ public class SecurityUtils {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public static String firmarMensaje(String mensaje, PrivateKey privateKey) {
+        try {
+            Signature signature = Signature.getInstance("SHA256withRSA");
+            signature.initSign(privateKey);
+            signature.update(mensaje.getBytes());
+            byte[] signedBytes = signature.sign();
+            return Base64.getEncoder().encodeToString(signedBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static boolean verificarFirma(String mensaje, String firma, PublicKey publicKey) {
+        try {
+            Signature signature = Signature.getInstance("SHA256withRSA");
+            signature.initVerify(publicKey);
+            signature.update(mensaje.getBytes());
+            byte[] firmaBytes = Base64.getDecoder().decode(firma);
+            return signature.verify(firmaBytes);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static byte[] generateRandomBytes(int length) {
+        byte[] randomBytes = new byte[length];
+        new java.security.SecureRandom().nextBytes(randomBytes);
+        return randomBytes;
     }
 }

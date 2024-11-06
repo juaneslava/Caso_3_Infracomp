@@ -30,6 +30,7 @@ public class Cliente extends Thread {
     private BufferedWriter out;
 
     private byte[] k_ab;
+    private byte[] k_hmac;
     private byte[] iv;
 
     
@@ -60,14 +61,11 @@ public class Cliente extends Thread {
             enviarReto();   // Envía el reto cifrado
             boolean validarReto = verificarReto();
             if (!validarReto) {
-                // System.out.println("No se pudo validar el reto.");
                 return;
             }
             else
             {
-                // System.out.println("Reto validado. Enviando OK.");
                 write("OK");
-                // System.out.println("último OK fue enviado.");
             }
             try {
                 Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
@@ -88,10 +86,8 @@ public class Cliente extends Thread {
             // Paso 17: Verificar
             if(!SecurityUtils.verifyHMC(estado, hmac, k_ab))
             {
-                // System.out.println("Error: El mensaje ha sido modificado.");
                 return;
             }
-            // System.out.println("Estado del paquete: " + estado);
             
             // Paso 18: Enviar mensaje de terminar
             write("TERMINAR");
@@ -109,15 +105,12 @@ public class Cliente extends Thread {
 
     public void enviarReto() {
         // Generar un reto corto
-        String reto = "Best group of infracomp";
-        String retoCifrado = cifrarMensaje(reto, serverPublicKey);
+        retoOriginal = "Best group of infracomp";
+        String retoCifrado = cifrarMensaje(retoOriginal, serverPublicKey);
     
         if (retoCifrado != null && !retoCifrado.isEmpty()) {
-            // System.out.println("Reto cifrado a enviar: " + retoCifrado);
             write(retoCifrado); // Envía el reto cifrado al servidor
-            // System.out.println("Reto enviado al servidor.");
         } else {
-            // System.out.println("Error: Reto cifrado es nulo o vacío.");
         }
     }
 
@@ -125,26 +118,16 @@ public class Cliente extends Thread {
         try {
             // Leer la respuesta `Rta` enviada por el servidor
             String respuesta = read();
-            // System.out.println("Respuesta recibida del servidor: " + respuesta);
     
             if (respuesta != null && respuesta.equals("Best group of infracomp")) {
-                // System.out.println("Reto validado correctamente. Enviando OK.");
                 return true;
             } else {
-                // System.out.println("Fallo en la validación del reto. Enviando ERROR.");
                 return false;
             }
         } catch (Exception e) {
             e.printStackTrace();
             return false;
         }
-    }
-    
-    private String calculateHMAC(String data, byte[] key) throws Exception {
-        Mac hmac = Mac.getInstance("HMACSHA384");
-        SecretKeySpec secretKey = new SecretKeySpec(key, "HMACSHA384");
-        hmac.init(secretKey);
-        return Base64.getEncoder().encodeToString(hmac.doFinal(data.getBytes()));
     }
     
     private void recibirParametrosDiffieHellman() {
@@ -155,37 +138,39 @@ public class Cliente extends Thread {
             System.out.println("P: " + P);
             Gx = new BigInteger(read());
             System.out.println("Gx: " + Gx);
-            String hmacRecibido = read();
+            String firma = read();
 
-            // Concatenar G, P y G^x para verificar
-            String data = G.toString() + P.toString() + Gx.toString();
-            String hmacCalculado = calculateHMAC(data, sharedSecretKey);
-
-            // Verificar el HMAC
-            if (hmacCalculado.equals(hmacRecibido)) {
-                System.out.println("HMAC verificado exitosamente. Enviando OK.");
-                write("OK");
-
-                // Generar G^y y calcular el secreto compartido
-                SecureRandom random = new SecureRandom();
-                BigInteger y = new BigInteger(512, random); // Valor secreto del cliente
-                BigInteger Gy = G.modPow(y, P); // G^y mod P
-                write(Gy.toString());
-
-                // Calcular el secreto compartido (G^x)^y mod P = G^(xy) mod P
-                BigInteger sharedSecret = Gx.modPow(y, P);
-                System.out.println("Secreto compartido (G^(xy) mod P): " + sharedSecret);
-
-                // Derivar claves k_w y k_hmac
-                MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
-                byte[] digest = sha512.digest(sharedSecret.toByteArray());
-                k_ab = Arrays.copyOfRange(digest, 0, 32); // Clave para cifrado AES
-                sharedSecretKey = Arrays.copyOfRange(digest, 32, 64); // Clave para HMAC
-
-            } else {
-                System.out.println("Error en la verificación del HMAC. Enviando ERROR.");
+            // Verificar la firma
+            String concatenated = G.toString() + ";" + P.toString() + ";" + Gx.toString();
+            if (!SecurityUtils.verificarFirma(concatenated, firma, serverPublicKey)) {
+                System.out.println("Error en la verificación de la firma. Enviando ERROR.");
                 write("ERROR");
+                return;
             }
+            else {
+                write("OK");
+            }
+
+            // Generar G^y y calcular el secreto compartido
+            SecureRandom random = new SecureRandom();
+            BigInteger y = new BigInteger(512, random); // Valor secreto del cliente
+            BigInteger Gy = G.modPow(y, P); // G^y mod P
+            write(Gy.toString());
+
+            // Calcular el secreto compartido (G^x)^y mod P = G^(xy) mod P
+            BigInteger sharedSecret = Gx.modPow(y, P);
+            System.out.println("Secreto compartido (G^(xy) mod P): " + sharedSecret);
+
+            // Derivar claves k_w y k_hmac
+            MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
+            byte[] digest = sha512.digest(sharedSecret.toByteArray());
+            k_ab = Arrays.copyOfRange(digest, 0, 32); // Clave para cifrado AES
+            k_hmac = Arrays.copyOfRange(digest, 32, 64); // Clave para HMAC
+
+            // Obtener IV
+            iv = read().getBytes();
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -199,7 +184,6 @@ public class Cliente extends Thread {
             // Asegurarse de que el mensaje no excede el límite de 117 bytes
             byte[] mensajeBytes = mensaje.getBytes("UTF-8");
             if (mensajeBytes.length > 117) {
-                // System.out.println("Error: El mensaje es demasiado largo para cifrar con RSA de 1024 bits.");
                 return null;
             }
     
