@@ -69,7 +69,11 @@ public class Cliente extends Thread {
                 write("OK");
                 // System.out.println("último OK fue enviado.");
             }
-            Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
+            try {
+                Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
             // Paso 9: Recibir G, P, y G^x del servidor
             recibirParametrosDiffieHellman();
