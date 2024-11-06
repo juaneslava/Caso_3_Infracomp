@@ -22,7 +22,10 @@ public class Consola {
                 generarLlaves();
                 break;
             case 2:
-                ejecutarDelegados();
+                int numClientes = 0;
+                System.out.println("Ingrese el número de clientes: ");
+                numClientes = scanner.nextInt();
+                ejecutarDelegados(numClientes);
                 break;
             case 3:
                 System.out.println("Saliendo...");
@@ -39,7 +42,7 @@ public class Consola {
         new KeyGenerator();
     }
 
-    public void ejecutarDelegados() {
+    public void ejecutarDelegados(int numClientes) {
         int port = 5000;
 
         Servidor servidor = new Servidor(port);
@@ -51,8 +54,10 @@ public class Consola {
             e.printStackTrace();
         }
 
-        Cliente cliente = new Cliente("localhost", port);
-        cliente.start();
+        for (int i = 0; i < numClientes; i++) {
+            Cliente cliente = new Cliente("localhost", port);
+            cliente.start();
+        }
     }
 
 }
