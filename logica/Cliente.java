@@ -61,12 +61,12 @@ public class Cliente extends Thread {
             enviarReto();   // Envía el reto cifrado
             boolean validarReto = verificarReto();
             if (!validarReto) {
-                System.out.println("Error en la validación del reto. Terminando conexión.");
+                System.out.println("CLIENTE: Error en la validación del reto. Terminando conexión.");
                 return;
             }
             else
             {
-                System.out.println("Reto validado. Enviando OK.");
+                System.out.println("CLIENTE: Reto validado. Enviando OK.");
                 write("OK");
             }
             try {
@@ -83,13 +83,13 @@ public class Cliente extends Thread {
 
             // Paso 16: Recibir respuesta
             String estado = SecurityUtils.decryptWithAES(read(), k_ab, iv);
-            System.out.println("Estado: " + estado);
+            System.out.println("CLIENTE: Estado: " + estado);
             String hmac = read();
             
             // Paso 17: Verificar
             if(!SecurityUtils.verifyHMC(estado, hmac, k_ab))
             {
-                System.out.println("Error en la verificación del HMAC. Terminando conexión.");
+                System.out.println("CLIENTE: Error en la verificación del HMAC. Terminando conexión.");
                 return;
             }
             
@@ -144,12 +144,12 @@ public class Cliente extends Thread {
             // Verificar la firma
             String concatenated = G.toString() + ";" + P.toString() + ";" + Gx.toString();
             if (!SecurityUtils.verificarFirma(concatenated, firma, serverPublicKey)) {
-                System.out.println("Error en la verificación de la firma. Enviando ERROR.");
+                System.out.println("CLIENTE: Error en la verificación de la firma. Enviando ERROR.");
                 write("ERROR");
                 return;
             }
             else {
-                System.out.println("Firma verificada. Enviando OK.");
+                System.out.println("CLIENTE: Firma verificada. Enviando OK.");
                 write("OK"); 
             }
 
@@ -161,7 +161,7 @@ public class Cliente extends Thread {
 
             // Calcular el secreto compartido (G^x)^y mod P = G^(xy) mod P
             BigInteger sharedSecret = Gx.modPow(y, P);
-            System.out.println("Secreto compartido (G^(xy) mod P): " + sharedSecret);
+            System.out.println("CLIENTE: Secreto compartido (G^(xy) mod P): " + sharedSecret);
 
             // Derivar claves k_w y k_hmac
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");

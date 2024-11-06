@@ -55,7 +55,7 @@ public class Servidor extends Thread{
         try {
             this.serverSocket = new ServerSocket(puerto);
             readKeysFromFile();
-            System.err.println("Server started.");
+            System.err.println("SERVIDOR: Server started.");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -99,8 +99,8 @@ public class Servidor extends Thread{
             String id_paquete = SecurityUtils.decryptWithAES(read(), k_ab, iv);
             String hmac_paquete = read();
 
-            System.out.println("ID Cliente: " + id_cliente);
-            System.out.println("ID Paquete: " + id_paquete);
+            System.out.println("SERVIDOR: ID Cliente: " + id_cliente);
+            System.out.println("SERVIDOR: ID Paquete: " + id_paquete);
 
             // Paso 16: Enviar respuesta
             atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
@@ -245,11 +245,11 @@ public class Servidor extends Thread{
             // Leer confirmación ("OK" o "ERROR") del cliente
             String confirmacion = read();
             if ("OK".equals(confirmacion)) {
-                System.out.println("Cliente confirmó el reto correctamente.");
+                System.out.println("SERVIDOR: Cliente confirmó el reto correctamente.");
             } else if ("ERROR".equals(confirmacion)) {
-                System.out.println("Cliente no confirmó el reto correctamente.");
+                System.out.println("SERVIDOR: Cliente no confirmó el reto correctamente.");
             } else {
-                System.out.println("Respuesta inesperada del cliente.");
+                System.out.println("SERVIDOR: Respuesta inesperada del cliente.");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -292,10 +292,10 @@ public class Servidor extends Thread{
             x = new BigInteger(512, random); // 512 bits aleatorios para x
             Gx = G.modPow(x, P); // G^x mod P
     
-            System.out.println("Valores de Diffie-Hellman leídos del archivo:");
-            System.out.println("P: " + P);
-            System.out.println("G: " + G);
-            System.out.println("G^x: " + Gx);
+            //System.out.println("Valores de Diffie-Hellman leídos del archivo:");
+            //System.out.println("P: " + P);
+            //System.out.println("G: " + G);
+            //System.out.println("G^x: " + Gx);
             
         } catch (IOException e) {
             e.printStackTrace();
@@ -331,7 +331,7 @@ public class Servidor extends Thread{
             // Calcular el secreto compartido (G^y)^x mod P = G^(xy) mod P
             BigInteger sharedSecret = Gy.modPow(x, P);
 
-            System.out.println("Secreto compartido (G^(xy) mod P): " + sharedSecret);
+            System.out.println("SERVIDOR: Secreto compartido (G^(xy) mod P): " + sharedSecret);
 
             // Paso 8: Derivar claves k_w y k_hmac a partir del secreto compartido
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
@@ -339,7 +339,7 @@ public class Servidor extends Thread{
 
             // Verificar la longitud del digest generado
             if (digest.length != 64) {
-                System.out.println("Error: digest no tiene la longitud esperada de 64 bytes.");
+                System.out.println("SERVIDOR: Error: digest no tiene la longitud esperada de 64 bytes.");
                 return;
             }
 
@@ -380,11 +380,11 @@ public class Servidor extends Thread{
                 write(estado_encrypted);
                 write(hmac_estado);
             } else {
-                System.out.println("Error en la verificación del cliente.");
+                System.out.println("SERVIDOR: Error en la verificación del cliente.");
                 write("ERROR");
             }
         } else {
-            System.out.println("Error en la verificación del paquete.");
+            System.out.println("SERVIDOR: Error en la verificación del paquete.");
             write("ERROR");
         }
     }
