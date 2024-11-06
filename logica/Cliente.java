@@ -3,9 +3,16 @@ package logica;
 import java.io.*;
 import java.net.Socket;
 import java.security.KeyFactory;
+import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.spec.X509EncodedKeySpec;
+import java.security.SecureRandom;
+import java.math.BigInteger;
+import java.util.Arrays;
 import java.util.Base64;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import javax.crypto.Cipher;
 
@@ -28,6 +35,11 @@ public class Cliente extends Thread {
     
     private PublicKey serverPublicKey;
     private String retoOriginal;
+
+    private BigInteger G;
+    private BigInteger P;
+    private BigInteger Gx;
+    private byte[] sharedSecretKey; // Clave para HMAC
     
     // Constructor to set server address and port
     public Cliente(String address, int port) {
@@ -57,6 +69,10 @@ public class Cliente extends Thread {
                 write("OK");
                 // System.out.println("último OK fue enviado.");
             }
+            Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
+
+            // Paso 9: Recibir G, P, y G^x del servidor
+            recibirParametrosDiffieHellman();
 
             // Paso 13 y 14: Enviar solicitud
             enviarSolicitud("1", "10");
@@ -120,7 +136,56 @@ public class Cliente extends Thread {
         }
     }
     
+    private String calculateHMAC(String data, byte[] key) throws Exception {
+        Mac hmac = Mac.getInstance("HMACSHA384");
+        SecretKeySpec secretKey = new SecretKeySpec(key, "HMACSHA384");
+        hmac.init(secretKey);
+        return Base64.getEncoder().encodeToString(hmac.doFinal(data.getBytes()));
+    }
     
+    private void recibirParametrosDiffieHellman() {
+        try {
+            G = new BigInteger(read());
+            System.out.println("G: " + G);
+            P = new BigInteger(read());
+            System.out.println("P: " + P);
+            Gx = new BigInteger(read());
+            System.out.println("Gx: " + Gx);
+            String hmacRecibido = read();
+
+            // Concatenar G, P y G^x para verificar
+            String data = G.toString() + P.toString() + Gx.toString();
+            String hmacCalculado = calculateHMAC(data, sharedSecretKey);
+
+            // Verificar el HMAC
+            if (hmacCalculado.equals(hmacRecibido)) {
+                System.out.println("HMAC verificado exitosamente. Enviando OK.");
+                write("OK");
+
+                // Generar G^y y calcular el secreto compartido
+                SecureRandom random = new SecureRandom();
+                BigInteger y = new BigInteger(512, random); // Valor secreto del cliente
+                BigInteger Gy = G.modPow(y, P); // G^y mod P
+                write(Gy.toString());
+
+                // Calcular el secreto compartido (G^x)^y mod P = G^(xy) mod P
+                BigInteger sharedSecret = Gx.modPow(y, P);
+                System.out.println("Secreto compartido (G^(xy) mod P): " + sharedSecret);
+
+                // Derivar claves k_w y k_hmac
+                MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
+                byte[] digest = sha512.digest(sharedSecret.toByteArray());
+                k_ab = Arrays.copyOfRange(digest, 0, 32); // Clave para cifrado AES
+                sharedSecretKey = Arrays.copyOfRange(digest, 32, 64); // Clave para HMAC
+
+            } else {
+                System.out.println("Error en la verificación del HMAC. Enviando ERROR.");
+                write("ERROR");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
     
     public String cifrarMensaje(String mensaje, PublicKey publicKey) {
         try {
