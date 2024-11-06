@@ -34,37 +34,29 @@ public class Cliente extends Thread {
         this.serverAddress = address;
         this.serverPort = port;
         this.serverPublicKey = readPublicKeyFromFile();
-        try
-        {
+    }
+    
+    @Override
+    public void run() {
+        try {
             this.socket = new Socket(this.serverAddress, this.serverPort);
             isr = new InputStreamReader(socket.getInputStream());
             osw = new OutputStreamWriter(socket.getOutputStream());
             in = new BufferedReader(isr);
             out = new BufferedWriter(osw);
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void run() {
-        try {
             enviarInicio();
             enviarReto();   // Envía el reto cifrado
             boolean validarReto = verificarReto();
             if (!validarReto) {
-                System.out.println("No se pudo validar el reto.");
+                // System.out.println("No se pudo validar el reto.");
                 return;
             }
             else
             {
-                System.out.println("Reto validado. Enviando OK.");
+                // System.out.println("Reto validado. Enviando OK.");
                 write("OK");
-                System.out.println("último OK fue enviado.");
+                // System.out.println("último OK fue enviado.");
             }
-            Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
 
             // Paso 13 y 14: Enviar solicitud
             enviarSolicitud("1", "10");
@@ -76,17 +68,17 @@ public class Cliente extends Thread {
             // Paso 17: Verificar
             if(!SecurityUtils.verifyHMC(estado, hmac, k_ab))
             {
-                System.out.println("Error: El mensaje ha sido modificado.");
+                // System.out.println("Error: El mensaje ha sido modificado.");
                 return;
             }
-            System.out.println("Estado del paquete: " + estado);
+            // System.out.println("Estado del paquete: " + estado);
             
             // Paso 18: Enviar mensaje de terminar
             write("TERMINAR");
 
 
             socket.close();
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -101,11 +93,11 @@ public class Cliente extends Thread {
         String retoCifrado = cifrarMensaje(reto, serverPublicKey);
     
         if (retoCifrado != null && !retoCifrado.isEmpty()) {
-            System.out.println("Reto cifrado a enviar: " + retoCifrado);
+            // System.out.println("Reto cifrado a enviar: " + retoCifrado);
             write(retoCifrado); // Envía el reto cifrado al servidor
-            System.out.println("Reto enviado al servidor.");
+            // System.out.println("Reto enviado al servidor.");
         } else {
-            System.out.println("Error: Reto cifrado es nulo o vacío.");
+            // System.out.println("Error: Reto cifrado es nulo o vacío.");
         }
     }
 
@@ -113,13 +105,13 @@ public class Cliente extends Thread {
         try {
             // Leer la respuesta `Rta` enviada por el servidor
             String respuesta = read();
-            System.out.println("Respuesta recibida del servidor: " + respuesta);
+            // System.out.println("Respuesta recibida del servidor: " + respuesta);
     
             if (respuesta != null && respuesta.equals("Best group of infracomp")) {
-                System.out.println("Reto validado correctamente. Enviando OK.");
+                // System.out.println("Reto validado correctamente. Enviando OK.");
                 return true;
             } else {
-                System.out.println("Fallo en la validación del reto. Enviando ERROR.");
+                // System.out.println("Fallo en la validación del reto. Enviando ERROR.");
                 return false;
             }
         } catch (Exception e) {
@@ -138,7 +130,7 @@ public class Cliente extends Thread {
             // Asegurarse de que el mensaje no excede el límite de 117 bytes
             byte[] mensajeBytes = mensaje.getBytes("UTF-8");
             if (mensajeBytes.length > 117) {
-                System.out.println("Error: El mensaje es demasiado largo para cifrar con RSA de 1024 bits.");
+                // System.out.println("Error: El mensaje es demasiado largo para cifrar con RSA de 1024 bits.");
                 return null;
             }
     
@@ -195,8 +187,14 @@ public class Cliente extends Thread {
 
     public String read() {
         try {
-            return in.readLine();
-        } catch (IOException e) {
+            String message = in.readLine();
+            while(message == null || message.isEmpty()) {
+                Thread.sleep(1);
+                message = in.readLine();
+            }
+            System.out.println("MENSAJE RECIBIDO POR CLIENTE: " + message);
+            return message;
+        } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
@@ -204,10 +202,12 @@ public class Cliente extends Thread {
 
     public void write(String message) {
         try {
-            out.write(message + "\n");
+            out.write(message);
             out.newLine();
-            out.flush();
-        } catch (IOException e) {
+            out.flush(); // Ensure the message is sent immediately
+            System.out.println("MENSAJE ENVIADO POR CLIENTE: " + message);
+            Thread.sleep(1000);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

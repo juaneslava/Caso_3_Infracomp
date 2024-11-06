@@ -43,20 +43,20 @@ public class Servidor extends Thread{
             this.serverSocket = new ServerSocket(puerto);
             readKeysFromFile();
             System.err.println("Server started.");
-            this.clientSocket = serverSocket.accept();
-            isr = new InputStreamReader(clientSocket.getInputStream());
-            osw = new OutputStreamWriter(clientSocket.getOutputStream());
-            in = new BufferedReader(isr);
-            out = new BufferedWriter(osw);
         } catch (Exception e) {
             e.printStackTrace();
         }
         paquetes = new HashMap<>();
     }
-
+    
     @Override
     public void run() {
         try {    
+            this.clientSocket = serverSocket.accept();
+            isr = new InputStreamReader(clientSocket.getInputStream());
+            osw = new OutputStreamWriter(clientSocket.getOutputStream());
+            in = new BufferedReader(isr);
+            out = new BufferedWriter(osw);
             recibirInicio(); // Recibir el mensaje "SECINIT" del cliente      
             recibirReto(); // Recibir el reto cifrado del cliente
             responderReto();
@@ -73,7 +73,7 @@ public class Servidor extends Thread{
 
             clientSocket.close();
             serverSocket.close();
-            System.out.println("Conexión cerrada en el servidor.");
+            // System.out.println("Conexión cerrada en el servidor.");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -81,28 +81,28 @@ public class Servidor extends Thread{
     
     public void recibirInicio() {
         try {
-            String inicio = in.readLine();
+            String inicio = read();
             if ("SECINIT".equals(inicio)) {
-                System.out.println("Inicio de sesión recibido.");
+                // System.out.println("Inicio de sesión recibido.");
             } else {
-                System.out.println("Error: Mensaje de inicio no válido.");
+                // System.out.println("Error: Mensaje de inicio no válido.");
                 // Opcional: podrías cerrar la conexión si el mensaje de inicio es incorrecto
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void recibirReto() {
         try {
-            retoRecibidoCifrado = in.readLine(); // Lee el reto cifrado enviado por el cliente
+            retoRecibidoCifrado = read(); // Lee el reto cifrado enviado por el cliente
             if (retoRecibidoCifrado == null || retoRecibidoCifrado.isEmpty()) {
-                System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
+                // System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
                 return;
             }
-            System.out.println("Reto cifrado recibido: " + retoRecibidoCifrado);
-            System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
-        } catch (IOException e) {
+            // System.out.println("Reto cifrado recibido: " + retoRecibidoCifrado);
+            // System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -111,7 +111,7 @@ public class Servidor extends Thread{
         try {
             if (serverSocket != null) {
                 serverSocket.close();
-                System.out.println("Server stopped.");
+                // System.out.println("Server stopped.");
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -134,7 +134,7 @@ public class Servidor extends Thread{
             this.publicKey = keyFactory.generatePublic(publicKeySpec);
             this.privateKey = keyFactory.generatePrivate(privateKeySpec);
 
-            System.out.println("Public key: " + publicKey);
+            // System.out.println("Public key: " + publicKey);
 
             fisPublic.close();
             fisPrivate.close();
@@ -201,49 +201,49 @@ public class Servidor extends Thread{
 
     public void responderReto() {
         try {
-            String retoRecibidoCifrado = in.readLine();
-            System.out.println("Mensaje cifrado recibido: " + retoRecibidoCifrado);
+            String retoRecibidoCifrado = read();
+            // System.out.println("Mensaje cifrado recibido: " + retoRecibidoCifrado);
     
             if (retoRecibidoCifrado != null && !retoRecibidoCifrado.isEmpty()) {
-                System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
+                // System.out.println("Longitud del mensaje cifrado recibido (Base64): " + retoRecibidoCifrado.length());
     
                 // Intentar descifrar el reto recibido
                 String retoDescifrado = descifrarMensaje(retoRecibidoCifrado, privateKey);
     
                 if (retoDescifrado != null) {
-                    System.out.println("Reto descifrado: " + retoDescifrado);
+                    // System.out.println("Reto descifrado: " + retoDescifrado);
     
                     // Enviar la respuesta al cliente
                     write(retoDescifrado);
-                    System.out.println("Rta enviada al cliente.");
+                    // System.out.println("Rta enviada al cliente.");
                 } else {
-                    System.out.println("Error al descifrar el reto. Enviando mensaje de error al cliente.");
+                    // System.out.println("Error al descifrar el reto. Enviando mensaje de error al cliente.");
                     write("ERROR_DESCIFRADO");
                     
                 }
             } else {
-                System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
+                // System.out.println("Error: Mensaje cifrado recibido es nulo o vacío.");
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public void esperarConfirmacion() {
         try {
-            System.out.println("Esperando confirmación del cliente...");
+            // System.out.println("Esperando confirmación del cliente...");
             
             // Leer confirmación ("OK" o "ERROR") del cliente
             String confirmacion = read();
             
-            System.out.println("Confirmación recibida del cliente: " + confirmacion);
+            // System.out.println("Confirmación recibida del cliente: " + confirmacion);
             
             if ("OK".equals(confirmacion)) {
-                System.out.println("Cliente confirmó: Reto validado correctamente.");
+                // System.out.println("Cliente confirmó: Reto validado correctamente.");
             } else if ("ERROR".equals(confirmacion)) {
-                System.out.println("Cliente indicó un error en la validación del reto.");
+                // System.out.println("Cliente indicó un error en la validación del reto.");
             } else {
-                System.out.println("Mensaje inesperado del cliente: " + confirmacion);
+                // System.out.println("Mensaje inesperado del cliente: " + confirmacion);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -278,16 +278,19 @@ public class Servidor extends Thread{
         try {
             out.write(message + "\n");
             out.newLine();
-            out.flush();
-        } catch (IOException e) {
+            out.flush(); // Ensure the message is sent immediately
+            System.out.println("MENSAJE ENVIADO POR EL SERVIDOR: " + message);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public String read() {
         try {
-            return in.readLine();
-        } catch (IOException e) {
+            String message = in.readLine();
+            System.out.println("MENSAJE RECIBIDO POR EL SERVIDOR: " + message);
+            return message;
+        } catch (Exception e ) {
             e.printStackTrace();
             return null;
         }
