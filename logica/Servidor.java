@@ -59,6 +59,7 @@ public class Servidor extends Thread{
             e.printStackTrace();
         }
         paquetes = new HashMap<>();
+        paquetes.put("10", new Paquete("10", "1", 7));
     }
     
     @Override
@@ -79,7 +80,6 @@ public class Servidor extends Thread{
 
             // Paso 10: Recibir "OK" o "ERROR" de verificación del cliente
             String respuesta = read();
-            System.out.println("Respuesta de verificación del cliente (paso 10): " + respuesta);
 
             boolean validacion = validateOK(respuesta);
             if (!validacion) {
@@ -97,6 +97,9 @@ public class Servidor extends Thread{
             String hmac_cliente = read();
             String id_paquete = SecurityUtils.decryptWithAES(read(), k_ab, iv);
             String hmac_paquete = read();
+
+            System.out.println("ID Cliente: " + id_cliente);
+            System.out.println("ID Paquete: " + id_paquete);
 
             // Paso 16: Enviar respuesta
             atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
@@ -220,8 +223,6 @@ public class Servidor extends Thread{
 
     public void responderReto() {
         try {
-            //String retoRecibidoCifrado = in.readLine();
-            System.out.println("Mensaje cifrado recibido: " + retoRecibidoCifrado);
             if (retoRecibidoCifrado != null && !retoRecibidoCifrado.isEmpty()) {
                 // Intentar descifrar el reto recibido
                 String retoDescifrado = descifrarMensaje(retoRecibidoCifrado, privateKey);
@@ -243,8 +244,11 @@ public class Servidor extends Thread{
             // Leer confirmación ("OK" o "ERROR") del cliente
             String confirmacion = read();
             if ("OK".equals(confirmacion)) {
+                System.out.println("Cliente confirmó el reto correctamente.");
             } else if ("ERROR".equals(confirmacion)) {
+                System.out.println("Cliente no confirmó el reto correctamente.");
             } else {
+                System.out.println("Respuesta inesperada del cliente.");
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -278,16 +282,8 @@ public class Servidor extends Thread{
 
             // Enviar G, P y G^x al cliente
             write(G.toString());
-            System.out.println("Valor de G enviado al cliente.");
             write(P.toString());
-            System.out.println("Valor de P enviado al cliente.");
             write(Gx.toString());
-            System.out.println("Valor de G^x enviado al cliente.");
-
-            System.out.println("Valores generados para Diffie-Hellman:");
-            System.out.println("G: " + G);
-            System.out.println("P: " + P);
-            System.out.println("G^x: " + Gx);
 
             // Firmar los valores G, P y G^x
             String concatenatedParams = G.toString() + ";" + P.toString() + ";" + Gx.toString();
@@ -303,10 +299,9 @@ public class Servidor extends Thread{
         try {
             // Recibir G^y del cliente    
             BigInteger Gy = new BigInteger(read()); // El cliente envía su propio G^y
-            System.out.println("Valor recibido de G^y del cliente: " + Gy);
-
             // Calcular el secreto compartido (G^y)^x mod P = G^(xy) mod P
             BigInteger sharedSecret = Gy.modPow(x, P);
+
             System.out.println("Secreto compartido (G^(xy) mod P): " + sharedSecret);
 
             // Paso 8: Derivar claves k_w y k_hmac a partir del secreto compartido
@@ -322,9 +317,6 @@ public class Servidor extends Thread{
             // Dividir el digest en dos mitades de 32 bytes cada una para k_w y k_hmac
             k_ab = Arrays.copyOfRange(digest, 0, 32); // Clave para cifrado AES
             k_hmac = Arrays.copyOfRange(digest, 32, 64); // Clave para HMAC
-
-            System.out.println("Clave para cifrado (k_w): " + Base64.getEncoder().encodeToString(k_ab));
-            System.out.println("Clave para HMAC (k_hmac): " + Base64.getEncoder().encodeToString(k_hmac));
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -334,10 +326,11 @@ public class Servidor extends Thread{
     public void generarIV() {
         // Generar IV aleatorio
         SecureRandom random = new SecureRandom();
-        iv = new byte[16];
+        iv = new byte[16]; // El IV para AES en modo CBC es de 16 bytes
         random.nextBytes(iv);
-        write(new String(iv));
-        
+        // Convertir IV a Base64 antes de enviar
+        String ivBase64 = Base64.getEncoder().encodeToString(iv);
+        write(ivBase64);
     }
 
 
@@ -358,9 +351,11 @@ public class Servidor extends Thread{
                 write(estado_encrypted);
                 write(hmac_estado);
             } else {
+                System.out.println("Error en la verificación del cliente.");
                 write("ERROR");
             }
         } else {
+            System.out.println("Error en la verificación del paquete.");
             write("ERROR");
         }
     }
@@ -368,7 +363,7 @@ public class Servidor extends Thread{
     public String verEstadoPaquete(String id) {
         Paquete paquete = paquetes.get(id);
         if (paquete == null) {
-            return "ERROR";
+            return "DESCONOCIDO";
         } else {
             return String.valueOf(paquete.getEstado());
         }
@@ -377,9 +372,7 @@ public class Servidor extends Thread{
     public void write(String message) {
         try {
             out.write(message + "\n");
-            //out.newLine();
             out.flush();
-            System.out.println("WRITE DEL SERVIDOR: " + message);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -388,7 +381,6 @@ public class Servidor extends Thread{
     public String read() {
         try {
             String message = in.readLine();
-            System.out.println("MENSAJE RECIBIDO POR EL SERVIDOR: " + message);
             return message;
         } catch (Exception e ) {
             e.printStackTrace();

@@ -61,10 +61,12 @@ public class Cliente extends Thread {
             enviarReto();   // Envía el reto cifrado
             boolean validarReto = verificarReto();
             if (!validarReto) {
+                System.out.println("Error en la validación del reto. Terminando conexión.");
                 return;
             }
             else
             {
+                System.out.println("Reto validado. Enviando OK.");
                 write("OK");
             }
             try {
@@ -81,11 +83,13 @@ public class Cliente extends Thread {
 
             // Paso 16: Recibir respuesta
             String estado = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+            System.out.println("Estado: " + estado);
             String hmac = read();
             
             // Paso 17: Verificar
             if(!SecurityUtils.verifyHMC(estado, hmac, k_ab))
             {
+                System.out.println("Error en la verificación del HMAC. Terminando conexión.");
                 return;
             }
             
@@ -133,11 +137,8 @@ public class Cliente extends Thread {
     private void recibirParametrosDiffieHellman() {
         try {
             G = new BigInteger(read());
-            System.out.println("G: " + G);
             P = new BigInteger(read());
-            System.out.println("P: " + P);
             Gx = new BigInteger(read());
-            System.out.println("Gx: " + Gx);
             String firma = read();
 
             // Verificar la firma
@@ -148,7 +149,8 @@ public class Cliente extends Thread {
                 return;
             }
             else {
-                write("OK");
+                System.out.println("Firma verificada. Enviando OK.");
+                write("OK"); 
             }
 
             // Generar G^y y calcular el secreto compartido
@@ -168,8 +170,8 @@ public class Cliente extends Thread {
             k_hmac = Arrays.copyOfRange(digest, 32, 64); // Clave para HMAC
 
             // Obtener IV
-            iv = read().getBytes();
-
+            String ivString = read();
+            iv = Base64.getDecoder().decode(ivString);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -245,7 +247,6 @@ public class Cliente extends Thread {
                 Thread.sleep(1);
                 message = in.readLine();
             }
-            System.out.println("MENSAJE RECIBIDO POR CLIENTE: " + message);
             return message;
         } catch (Exception e) {
             e.printStackTrace();
@@ -258,7 +259,6 @@ public class Cliente extends Thread {
             out.write(message);
             out.newLine();
             out.flush(); // Ensure the message is sent immediately
-            System.out.println("MENSAJE ENVIADO POR CLIENTE: " + message);
             Thread.sleep(1000);
         } catch (Exception e) {
             e.printStackTrace();
