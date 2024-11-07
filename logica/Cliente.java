@@ -73,12 +73,8 @@ public class Cliente extends Thread {
             }
             else
             {
+                System.out.println("Cliente " + id + " validó el reto");
                 write("OK");
-            }
-            try {
-                Thread.sleep(500);  // Espera para asegurar la recepción en el servidor
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
 
             // Paso 9: Recibir G, P, y G^x del servidor
@@ -95,9 +91,11 @@ public class Cliente extends Thread {
             // Paso 17: Verificar
             if(!SecurityUtils.verifyHMC(estado, hmac, k_hmac))
             {
+                System.out.println("Cliente " + id + " no pudo verificar la respuesta del servidor");
                 return;
             }
             
+            System.out.println("Cliente " + id + ": Estado del " + misPaquetes.get(id_paquete).getId() + ": " + estado);
             // Paso 18: Enviar mensaje de terminar
             write("TERMINAR");
 
@@ -153,7 +151,8 @@ public class Cliente extends Thread {
                 return;
             }
             else {
-                write("OK"); 
+                System.out.println("Cliente " + id + " confirmó la firma del servidor");
+                write("OK");
             }
 
             // Generar G^y y calcular el secreto compartido
@@ -246,7 +245,6 @@ public class Cliente extends Thread {
         try {
             String message = in.readLine();
             while(message == null || message.isEmpty()) {
-                Thread.sleep(1);
                 message = in.readLine();
             }
             return message;
@@ -261,7 +259,6 @@ public class Cliente extends Thread {
             out.write(message);
             out.newLine();
             out.flush(); // Ensure the message is sent immediately
-            Thread.sleep(1000);
         } catch (Exception e) {
             e.printStackTrace();
         }
