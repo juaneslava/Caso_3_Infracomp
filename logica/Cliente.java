@@ -120,8 +120,10 @@ public class Cliente extends Thread {
     }
 
     public void enviarReto() {
-        // Generar un reto corto
-        retoOriginal = "Best group of infracomp";
+        
+        // SecureRandom random = new SecureRandom();
+        // retoOriginal = new BigInteger(512, random).toString();
+        retoOriginal = "Best group of infracomp :)";
         String retoCifrado = cifrarMensaje(retoOriginal, serverPublicKey);
     
         if (retoCifrado != null && !retoCifrado.isEmpty()) {
@@ -135,7 +137,7 @@ public class Cliente extends Thread {
             // Leer la respuesta `Rta` enviada por el servidor
             String respuesta = read();
     
-            if (respuesta != null && respuesta.equals("Best group of infracomp")) {
+            if (respuesta != null && respuesta.equals(retoOriginal)) {
                 return true;
             } else {
                 return false;
