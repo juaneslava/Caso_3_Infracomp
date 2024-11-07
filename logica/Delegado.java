@@ -3,6 +3,7 @@ package logica;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.FileInputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -249,20 +250,48 @@ public class Delegado extends Thread{
 
     // Método para inicializar los valores de Diffie-Hellman
     public void initDiffieHellmanParameters() {
-        // Paso 7: Generar valores de Diffie-Hellman
-        SecureRandom random = new SecureRandom();
+        // Leer los valores de P y G desde el archivo dh_values.txt
+        try (BufferedReader br = new BufferedReader(new FileReader("logica/dh_values.txt"))) {
+            String line;
+            StringBuilder pBuilder = new StringBuilder();
+            BigInteger g = null;
+    
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+    
+                // Identificar la línea de P y eliminar los dos puntos y espacios
+                if (line.startsWith("P:")) {
+                    line = line.substring(2).trim();  // Remover "P:"
+                    pBuilder.append(line.replace(":", ""));  // Remover ":" entre bytes
+                } else if (line.startsWith("G:")) {
+                    String gValue = line.split(" ")[1].trim();
+                    g = new BigInteger(gValue);
+                }
+            }
+    
+            // Convertir el valor de P leído desde el archivo en BigInteger
+            P = new BigInteger(pBuilder.toString(), 16);
             
-        // Generador G y número primo P
-        G = new BigInteger("2"); // Generalmente se usa 2 o 5 como generador
-        P = new BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD1"
-                                    + "29024E088A67CC74020BBEA63B139B22514A08798E3404DD"
-                                    + "EF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245"
-                                    + "E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7ED"
-                                    + "EE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381"
-                                    + "FFFFFFFFFFFFFFFF", 16);
-        // Elegir un valor privado x aleatorio
-        x = new BigInteger(512, random); // 512 bits aleatorios para x
-        Gx = G.modPow(x, P); // G^x mod P
+            // Asignar el valor de G si se leyó correctamente
+            if (g != null) {
+                G = g;
+            } else {
+                throw new IOException("Valor de G no encontrado en el archivo dh_values.txt");
+            }
+    
+            // Generar el valor privado x y calcular G^x mod P
+            SecureRandom random = new SecureRandom();
+            x = new BigInteger(512, random); // 512 bits aleatorios para x
+            Gx = G.modPow(x, P); // G^x mod P
+    
+            //System.out.println("Valores de Diffie-Hellman leídos del archivo:");
+            //System.out.println("P: " + P);
+            //System.out.println("G: " + G);
+            //System.out.println("G^x: " + Gx);
+            
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     // Método para enviar G, P y G^x al cliente
