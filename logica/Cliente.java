@@ -10,11 +10,13 @@ import java.security.SecureRandom;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Base64;
-
+import java.util.List;
 
 import javax.crypto.Cipher;
 
 public class Cliente extends Thread {
+
+    private String id;
 
     private String serverAddress;
     private int serverPort;
@@ -38,12 +40,21 @@ public class Cliente extends Thread {
     private BigInteger G;
     private BigInteger P;
     private BigInteger Gx;
+
+    private List<Paquete> misPaquetes;
     
     // Constructor to set server address and port
-    public Cliente(String address, int port) {
+    public Cliente(String address, int port, String id) {
         this.serverAddress = address;
         this.serverPort = port;
         this.serverPublicKey = readPublicKeyFromFile();
+        this.id = id;
+        this.misPaquetes = new java.util.ArrayList<>();
+        for (Paquete paquete : Servidor.paquetes.values()) {
+            if (paquete.getId_cliente().equals(id)) {
+                misPaquetes.add(paquete);
+            }
+        }
     }
     
     @Override
@@ -58,12 +69,10 @@ public class Cliente extends Thread {
             enviarReto();   // Envía el reto cifrado
             boolean validarReto = verificarReto();
             if (!validarReto) {
-                System.out.println("Error en la validación del reto. Terminando conexión.");
                 return;
             }
             else
             {
-                System.out.println("Reto validado. Enviando OK.");
                 write("OK");
             }
             try {
@@ -76,17 +85,16 @@ public class Cliente extends Thread {
             recibirParametrosDiffieHellman();
 
             // Paso 13 y 14: Enviar solicitud
-            enviarSolicitud("1", "10");
+            int id_paquete = (int) (Math.random() * misPaquetes.size());
+            enviarSolicitud(id, misPaquetes.get(id_paquete).getId());
 
             // Paso 16: Recibir respuesta
             String estado = SecurityUtils.decryptWithAES(read(), k_ab, iv);
-            System.out.println("Estado: " + estado);
             String hmac = read();
             
             // Paso 17: Verificar
             if(!SecurityUtils.verifyHMC(estado, hmac, k_hmac))
             {
-                System.out.println("Error en la verificación del HMAC. Terminando conexión.");
                 return;
             }
             
@@ -141,12 +149,10 @@ public class Cliente extends Thread {
             // Verificar la firma
             String concatenated = G.toString() + ";" + P.toString() + ";" + Gx.toString();
             if (!SecurityUtils.verificarFirma(concatenated, firma, serverPublicKey)) {
-                System.out.println("Error en la verificación de la firma. Enviando ERROR.");
                 write("ERROR");
                 return;
             }
             else {
-                System.out.println("Firma verificada. Enviando OK.");
                 write("OK"); 
             }
 
@@ -158,7 +164,6 @@ public class Cliente extends Thread {
 
             // Calcular el secreto compartido (G^x)^y mod P = G^(xy) mod P
             BigInteger sharedSecret = Gx.modPow(y, P);
-            System.out.println("Secreto compartido (G^(xy) mod P): " + sharedSecret);
 
             // Derivar claves k_w y k_hmac
             MessageDigest sha512 = MessageDigest.getInstance("SHA-512");
@@ -263,7 +268,7 @@ public class Cliente extends Thread {
     }
 
     public static void main(String[] args) {
-        Cliente cliente = new Cliente("localhost", 5000);
+        Cliente cliente = new Cliente("localhost", 5000, "Cliente0");
         cliente.start();
     }
 }

@@ -46,6 +46,12 @@ public class Consola {
         int port = 5000;
 
         Servidor servidor = new Servidor(port);
+        System.out.println("numClientes: " + numClientes);
+        if (numClientes == 1) {
+            servidor.llenarPaquetes(Servidor.paquetes, numClientes, 32);
+        } else {
+            servidor.llenarPaquetes(Servidor.paquetes, numClientes, numClientes);
+        }
         servidor.start();
 
         try {
@@ -55,7 +61,7 @@ public class Consola {
         }
 
         for (int i = 0; i < numClientes; i++) {
-            Cliente cliente = new Cliente("localhost", port);
+            Cliente cliente = new Cliente("localhost", port, "Cliente" + i);
             cliente.start();
         }
     }
