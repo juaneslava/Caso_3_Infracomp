@@ -17,6 +17,7 @@ import javax.crypto.Cipher;
 public class Cliente extends Thread {
 
     private String id;
+    private boolean iterativo;
 
     private String serverAddress;
     private int serverPort;
@@ -44,11 +45,12 @@ public class Cliente extends Thread {
     private List<Paquete> misPaquetes;
     
     // Constructor to set server address and port
-    public Cliente(String address, int port, String id) {
+    public Cliente(String address, int port, String id, boolean iterativo) {
         this.serverAddress = address;
         this.serverPort = port;
         this.serverPublicKey = readPublicKeyFromFile();
         this.id = id;
+        this.iterativo = iterativo;
         this.misPaquetes = new java.util.ArrayList<>();
         for (Paquete paquete : Servidor.paquetes.values()) {
             if (paquete.getId_cliente().equals(id)) {
@@ -73,33 +75,40 @@ public class Cliente extends Thread {
             }
             else
             {
-                System.out.println("Cliente " + id + " validó el reto");
+                System.out.println(id + " validó el reto");
                 write("OK");
             }
 
             // Paso 9: Recibir G, P, y G^x del servidor
             recibirParametrosDiffieHellman();
 
-            // Paso 13 y 14: Enviar solicitud
-            int id_paquete = (int) (Math.random() * misPaquetes.size());
-            enviarSolicitud(id, misPaquetes.get(id_paquete).getId());
+            int repeticiones = 1;
 
-            // Paso 16: Recibir respuesta
-            String estado = SecurityUtils.decryptWithAES(read(), k_ab, iv);
-            String hmac = read();
-            
-            // Paso 17: Verificar
-            if(!SecurityUtils.verifyHMC(estado, hmac, k_hmac))
-            {
-                System.out.println("Cliente " + id + " no pudo verificar la respuesta del servidor");
-                return;
+            if (iterativo) {
+                repeticiones = 32;
+            }
+
+            for(int i = 0; i < repeticiones; i++) {
+                // Paso 13 y 14: Enviar solicitud
+                int id_paquete = (int) (Math.random() * misPaquetes.size());
+                enviarSolicitud(id, misPaquetes.get(id_paquete).getId());
+    
+                // Paso 16: Recibir respuesta
+                String estado = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+                String hmac = read();
+                
+                // Paso 17: Verificar
+                if(!SecurityUtils.verifyHMC(estado, hmac, k_hmac))
+                {
+                    System.out.println(id + " no pudo verificar la respuesta del servidor");
+                    return;
+                }
+                
+                System.out.println(id + ": Estado del " + misPaquetes.get(id_paquete).getId() + ": " + estado);
+                // Paso 18: Enviar mensaje de terminar
             }
             
-            System.out.println("Cliente " + id + ": Estado del " + misPaquetes.get(id_paquete).getId() + ": " + estado);
-            // Paso 18: Enviar mensaje de terminar
             write("TERMINAR");
-
-
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -151,7 +160,7 @@ public class Cliente extends Thread {
                 return;
             }
             else {
-                System.out.println("Cliente " + id + " confirmó la firma del servidor");
+                System.out.println(id + " confirmó la firma del servidor");
                 write("OK");
             }
 
@@ -265,7 +274,7 @@ public class Cliente extends Thread {
     }
 
     public static void main(String[] args) {
-        Cliente cliente = new Cliente("localhost", 5000, "Cliente0");
+        Cliente cliente = new Cliente("localhost", 5000, "Cliente0", false);
         cliente.start();
     }
 }

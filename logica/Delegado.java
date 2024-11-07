@@ -46,12 +46,15 @@ public class Delegado extends Thread{
     private BigInteger P;
     private BigInteger Gx;
     private BigInteger x; // Valor secreto del servidor
+
+    private boolean iterativo;
     
-    public Delegado(Socket clienSocket) {
+    public Delegado(Socket clienSocket, boolean iterativo) {
         try {
             this.clientSocket = clienSocket;
             readKeysFromFile();
             System.err.println("Server started.");
+            this.iterativo = iterativo;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -88,15 +91,25 @@ public class Delegado extends Thread{
             generarIV();
 
             // Paso 15: Recibir la solicitud del cliente
-            String id_cliente = SecurityUtils.decryptWithAES(read(), k_ab, iv);
-            String hmac_cliente = read();
-            String id_paquete = SecurityUtils.decryptWithAES(read(), k_ab, iv);
-            String hmac_paquete = read();
+            int repeticiones = 1;
+            if (iterativo) {
+                repeticiones = 32;
+            }
+            for (int i = 0; i < repeticiones; i++) {
+                String id_cliente = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+                String hmac_cliente = read();
+                String id_paquete = SecurityUtils.decryptWithAES(read(), k_ab, iv);
+                String hmac_paquete = read();
+    
+    
+                // Paso 16: Enviar respuesta
+                atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
+                System.out.println("Delegado: Atendiendo solicitud " + i);
+            }
 
-
-            // Paso 16: Enviar respuesta
-            atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
-
+            // Paso 18: Recibir mensaje de terminar
+            String terminar = read();
+            System.out.println("Delegado: " + terminar);
             clientSocket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -328,9 +341,11 @@ public class Delegado extends Thread{
                 write(estado_encrypted);
                 write(hmac_estado);
             } else {
+                System.out.println("Delegado: ERROR");
                 write("ERROR");
             }
         } else {
+            System.out.println("Delegado: ERROR");
             write("ERROR");
         }
     }
@@ -373,7 +388,7 @@ public class Delegado extends Thread{
             serverSocket = new ServerSocket(5000);
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                Delegado delegado = new Delegado(clientSocket);
+                Delegado delegado = new Delegado(clientSocket, false);
                 delegado.start();
             }
         } catch (IOException e) {

@@ -6,13 +6,19 @@ import java.util.Map;
 
 public class Servidor extends Thread {
 
+    private ServerSocket serverSocket;
     private int port;
+
+    boolean iterativo = false;
 
     public static Map<String, Paquete> paquetes; 
 
-    public Servidor(int port) {
+    public Servidor(int port, int numClientes) {
         this.port = port;
         paquetes = new java.util.HashMap<>();
+        if (numClientes == 1) {
+            iterativo = true;
+        }
     }
 
     @Override
@@ -21,10 +27,11 @@ public class Servidor extends Thread {
     }
 
     public void iniciarServidor() {
-        try (ServerSocket serverSocket = new ServerSocket(this.port)) {
+        try  {
+            serverSocket = new ServerSocket(this.port);
             while (true) {
                 Socket clientSocket = serverSocket.accept();
-                Delegado delegado = new Delegado(clientSocket);
+                Delegado delegado = new Delegado(clientSocket, iterativo);
                 delegado.start();
             }
         } catch (Exception e) {

@@ -45,12 +45,12 @@ public class Consola {
     public void ejecutarDelegados(int numClientes) {
         int port = 5000;
 
-        Servidor servidor = new Servidor(port);
+        Servidor servidor = new Servidor(port, numClientes);
         System.out.println("numClientes: " + numClientes);
         if (numClientes == 1) {
             servidor.llenarPaquetes(Servidor.paquetes, numClientes, 32);
         } else {
-            servidor.llenarPaquetes(Servidor.paquetes, numClientes, numClientes);
+            servidor.llenarPaquetes(Servidor.paquetes, numClientes, numClientes*3);
         }
         servidor.start();
 
@@ -60,8 +60,13 @@ public class Consola {
             e.printStackTrace();
         }
 
+        boolean iterativo = false;
+        if (numClientes == 1) {
+            iterativo = true;
+        }
+
         for (int i = 0; i < numClientes; i++) {
-            Cliente cliente = new Cliente("localhost", port, "Cliente" + i);
+            Cliente cliente = new Cliente("localhost", port, "Cliente" + i, iterativo );
             cliente.start();
         }
     }
