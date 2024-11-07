@@ -71,7 +71,11 @@ public class Delegado extends Thread{
             out = new BufferedWriter(osw);
             recibirInicio(); // Recibir el mensaje "SECINIT" del cliente      
             recibirReto(); // Recibir el reto cifrado del cliente
+            Long tiempoInicio = System.currentTimeMillis();
             responderReto();
+            Long tiempoFin = System.currentTimeMillis();
+            System.out.println("Delegado: Reto respondido en " + (tiempoFin - tiempoInicio) + " ms");
+
             esperarConfirmacion();
 
              // Paso 7 y 8: Inicializar Diffie-Hellman
@@ -104,8 +108,10 @@ public class Delegado extends Thread{
     
     
                 // Paso 16: Enviar respuesta
+                Long tiempoInicioConsulta = System.currentTimeMillis();
                 atenderSolicitud(id_cliente, hmac_cliente, id_paquete, hmac_paquete);
-                System.out.println("Delegado: Atendiendo solicitud " + i);
+                Long tiempoFinConsulta = System.currentTimeMillis();
+                System.out.println("Delegado: Consulta verificada en " + (tiempoFinConsulta - tiempoInicioConsulta) + " ms");
             }
 
             // Paso 18: Recibir mensaje de terminar
@@ -299,7 +305,10 @@ public class Delegado extends Thread{
         try {
 
             // Paso 7: Generar valores de Diffie-Hellman
+            Long tiempoInicio = System.currentTimeMillis();
             initDiffieHellmanParameters();
+            Long tiempoFin = System.currentTimeMillis();
+            System.out.println("Delegado: Valores de Diffie-Hellman generados en " + (tiempoFin - tiempoInicio) + " ms");
 
             // Enviar G, P y G^x al cliente
             write(G.toString());
@@ -365,7 +374,17 @@ public class Delegado extends Thread{
         if (SecurityUtils.verifyHMC(id_paquete, hmac_paquete, k_hmac)) {
             if (SecurityUtils.verifyHMC(id_cliente, hmac_cliente, k_hmac)) {
                 String estado = verEstadoPaquete(id_paquete);
+                Long tiempoInicio = System.currentTimeMillis();
                 String estado_encrypted = SecurityUtils.encryptWithAES(estado, k_ab, iv);
+                Long tiempoFin = System.currentTimeMillis();
+                System.out.println("Delegado: Tiempo de cifrado simétrico: " + (tiempoFin - tiempoInicio) + " ms");
+
+                // Simulacion asimetrico
+                tiempoInicio = System.currentTimeMillis();
+                String estado_encrypted_asimetrico = cifrarMensaje(estado, publicKey);
+                tiempoFin = System.currentTimeMillis();
+                System.out.println("Delegado: Tiempo de cifrado asimétrico: " + (tiempoFin - tiempoInicio) + " ms");
+
                 String hmac_estado = SecurityUtils.generateHMC(estado, k_hmac);
                 write(estado_encrypted);
                 write(hmac_estado);

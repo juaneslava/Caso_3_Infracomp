@@ -53,4 +53,22 @@ public class Paquete {
             return "DESCONOCIDO";
         }
     }
+
+    public static String convertirEstadoString (int estado) {
+        if (estado == 1) {
+            return "ENOFICINA";
+        } else if (estado == 2) {
+            return "RECOGIDO";
+        } else if (estado == 3) {
+            return "ENCLASIFICACION";
+        } else if (estado == 4) {
+            return "DESPACHADO";
+        } else if (estado == 5) {
+            return "ENENTREGA";
+        } else if (estado == 6) {
+            return "ENTREGADO";
+        } else {
+            return "DESCONOCIDO";
+        }
+    }
 }
