@@ -241,7 +241,20 @@ public class Cliente extends Thread {
     public void enviarSolicitud(String id_cliente, String id_paquete) {
         String hmac_cliente = SecurityUtils.generateHMC(id_cliente, k_hmac);
         String hmac_paquete = SecurityUtils.generateHMC(id_paquete, k_hmac);
+        Long tsi = System.currentTimeMillis();
         String cliente_encrypted = SecurityUtils.encryptWithAES(id_cliente, k_ab, iv);
+        Long tsf = System.currentTimeMillis();
+        System.out.println("Tiempo de cifrado simétrico: " + (tsf - tsi) + " ms");
+
+        // Simulacion llave asimetrica
+        Long tsi2 = System.currentTimeMillis();
+        String paquete_encrypted_test = cifrarMensaje(id_paquete, serverPublicKey);
+        Long tsf2 = System.currentTimeMillis();
+        System.out.println("Tiempo de cifrado asimétrico: " + (tsf2 - tsi2) + " ms");
+
+        
+
+
         String paquete_encrypted = SecurityUtils.encryptWithAES(id_paquete, k_ab, iv);
 
         write(cliente_encrypted);
@@ -272,6 +285,7 @@ public class Cliente extends Thread {
             e.printStackTrace();
         }
     }
+
 
     public static void main(String[] args) {
         Cliente cliente = new Cliente("localhost", 5000, "Cliente0", false);
